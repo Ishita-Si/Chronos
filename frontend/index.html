@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b1120" />
+  <title>CHRONOS — Unread Plant Memory Engine</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">◴</span>
+      <div>
+        <h1>CHRONOS</h1>
+        <p>Unread Plant Memory Engine</p>
+      </div>
+    </div>
+    <div class="topright">
+      <select id="role-select" title="Active role (RBAC)">
+        <option value="eng-demo">👷 Engineer</option>
+        <option value="tech-demo">🔧 Technician</option>
+        <option value="comp-demo">📋 Compliance</option>
+        <option value="admin-demo">🛡 Admin</option>
+      </select>
+      <div id="asof" class="asof"></div>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs">
+    <button data-view="dashboard" class="active">🏠 Home</button>
+    <button data-view="copilot">💬 Ask</button>
+    <button data-view="risk">⚠ Risk</button>
+    <button data-view="pid">🗺 P&amp;ID</button>
+    <button data-view="compliance">✓ Compliance</button>
+    <button data-view="benchmark">📊 Benchmark</button>
+  </nav>
+
+  <main id="app">
+    <!-- DASHBOARD -->
+    <section id="view-dashboard" class="view active">
+      <div id="status-banner"></div>
+      <div id="attention"></div>
+
+      <h2 class="section-title">What would you like to do?</h2>
+      <div id="quick-actions" class="quick-grid"></div>
+
+      <h2 class="section-title">Your plant at a glance</h2>
+      <div id="glance" class="kpi-grid"></div>
+
+      <details id="under-hood">
+        <summary>Knowledge engine · under the hood</summary>
+        <div id="kpis" class="kpi-grid"></div>
+      </details>
+    </section>
+
+    <!-- COPILOT -->
+    <section id="view-copilot" class="view">
+      <div class="copilot-head">
+        <h2 class="section-title">Memory Copilot</h2>
+        <p class="muted">Source-backed answers from decades of plant memory.</p>
+      </div>
+      <div class="ask-row">
+        <select id="copilot-asset"></select>
+        <input id="copilot-q" type="text"
+               placeholder="e.g. Why is high vibration recurring on P-204?" />
+        <button id="copilot-send">Ask</button>
+      </div>
+      <div class="suggested" id="suggested"></div>
+      <div id="copilot-answer"></div>
+    </section>
+
+    <!-- RISK / ASSET DETAIL -->
+    <section id="view-risk" class="view">
+      <h2 class="section-title">Your equipment</h2>
+      <p class="muted">Tap any asset to see its history, risk and recommended actions.</p>
+      <div id="risk-assets" class="cards"></div>
+      <div id="asset-detail"></div>
+      <h2 class="section-title">Failure patterns the system has learned</h2>
+      <p class="muted">Recurring sequences mined from past failures — the early-warning signatures.</p>
+      <div id="trajectories" class="cards"></div>
+    </section>
+
+    <!-- P&ID -->
+    <section id="view-pid" class="view">
+      <h2 class="section-title">P&amp;ID parsing — tag &amp; connectivity extraction</h2>
+      <p class="muted">Equipment tags and process connectivity extracted from the
+        engineering drawing and linked into the knowledge graph.</p>
+      <div id="pid-canvas"></div>
+      <div id="pid-meta"></div>
+    </section>
+
+    <!-- BENCHMARK -->
+    <section id="view-benchmark" class="view">
+      <h2 class="section-title">Evaluation &amp; benchmarks</h2>
+      <p class="muted">Measured against the judging criteria. CHRONOS vs traditional search.</p>
+      <div id="benchmark"><div class="spin">Run from the Benchmark tab…</div></div>
+    </section>
+
+    <!-- COMPLIANCE -->
+    <section id="view-compliance" class="view">
+      <div class="ask-row">
+        <h2 class="section-title" style="flex:1">Compliance & Quality Intelligence</h2>
+        <select id="comp-standard"></select>
+      </div>
+      <div id="comp-summary" class="kpi-grid"></div>
+      <div id="comp-gaps"></div>
+      <div id="evidence-pack"></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>CHRONOS · Temporal Industrial Knowledge Graph + Sequence Intelligence</span>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>

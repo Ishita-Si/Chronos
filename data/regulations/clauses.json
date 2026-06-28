@@ -1,0 +1,47 @@
+[
+  {
+    "clause_id": "OISD-130-7.2",
+    "standard": "OISD-130",
+    "title": "Condition monitoring of rotating equipment",
+    "text": "Critical rotating equipment shall be subjected to periodic vibration condition monitoring at intervals not exceeding one month, with records maintained and trended.",
+    "evidence_type": "vibration_route",
+    "frequency_days": 31,
+    "applies_to_type": "pump"
+  },
+  {
+    "clause_id": "OISD-130-9.1",
+    "standard": "OISD-130",
+    "title": "Alignment after mechanical maintenance",
+    "text": "Shaft alignment of pumps shall be verified and recorded after any mechanical seal or coupling maintenance before return to service.",
+    "evidence_type": "alignment_check",
+    "frequency_days": null,
+    "applies_to_type": "pump"
+  },
+  {
+    "clause_id": "FACT-ACT-VES-1",
+    "standard": "Factory Act 1948 (Rule 61)",
+    "title": "Pressure vessel / safety valve examination",
+    "text": "Every pressure vessel and its safety valve shall be examined and pop-tested by a competent person at intervals not exceeding 12 months.",
+    "evidence_type": "psv_test",
+    "frequency_days": 366,
+    "applies_to_type": "vessel"
+  },
+  {
+    "clause_id": "PESO-CG-4",
+    "standard": "PESO / Gas Cylinder Rules",
+    "title": "Compressed air / gas system inspection",
+    "text": "Compressed gas generating equipment shall undergo documented mechanical integrity inspection at intervals not exceeding six months.",
+    "evidence_type": "integrity_inspection",
+    "frequency_days": 183,
+    "applies_to_type": "compressor"
+  },
+  {
+    "clause_id": "OISD-130-8.4",
+    "standard": "OISD-130",
+    "title": "Heat exchanger performance monitoring",
+    "text": "Heat exchanger fouling shall be monitored by thermography or performance trending at intervals not exceeding three months.",
+    "evidence_type": "thermography",
+    "frequency_days": 92,
+    "applies_to_type": "heat_exchanger"
+  }
+]
