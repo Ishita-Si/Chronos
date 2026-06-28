@@ -1,0 +1,14 @@
+# Render.com blueprint — one-click deploy of CHRONOS.
+# In Render: New > Blueprint > connect this repo. Free tier works.
+services:
+  - type: web
+    name: chronos
+    runtime: python
+    plan: free
+    buildCommand: "python -m chronos.pipeline --reset"
+    startCommand: "python -m chronos.server"
+    envVars:
+      - key: CHRONOS_HOST
+        value: 0.0.0.0
+      - key: PYTHON_VERSION
+        value: "3.12.7"

@@ -162,6 +162,29 @@ A full screen-by-screen script is in [`DEMO.md`](DEMO.md).
 
 ---
 
+## ☁️ Deploy (live demo)
+
+CHRONOS is a single self-contained process that builds its own data on startup,
+so it hosts trivially. It honours `$PORT` and `CHRONOS_HOST` for cloud platforms.
+
+**Render (free, recommended):** push the repo, then *New → Blueprint* and pick it —
+[`render.yaml`](render.yaml) does the rest. Or *New → Web Service* with
+build `python -m chronos.pipeline --reset`, start `python -m chronos.server`, and
+env `CHRONOS_HOST=0.0.0.0`.
+
+**Docker (anywhere):**
+```bash
+docker build -t chronos .
+docker run -p 8000:8000 chronos        # http://localhost:8000
+```
+
+**Railway / Heroku-style:** the [`Procfile`](Procfile) is ready to go.
+
+> Free tiers sleep on inactivity, so the first request after idle takes a few
+> seconds to wake + rebuild the in-memory indexes. Subsequent requests are instant.
+
+---
+
 ## 🔐 Security & deployment
 
 - **RBAC**: tokens → roles (`technician`, `engineer`, `compliance`, `admin`) →

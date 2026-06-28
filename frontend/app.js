@@ -96,6 +96,9 @@ async function loadDashboard() {
     kpi(s.trajectories, "Failure patterns learned"),
     kpi(s.passages.toLocaleString(), "Searchable passages"),
   ].join("");
+
+  animateKpis("#glance");
+  animateKpis("#kpis");
 }
 
 const STAGE_LABEL = {
@@ -161,8 +164,10 @@ function trajCard(t) {
 /* ---------------- copilot ---------------- */
 const SUGGESTED = [
   "Why is high vibration recurring on P-204?",
-  "What should I do about the P-204 bypass?",
-  "Has HX-11 had fouling before?",
+  "What assets are most likely to fail?",
+  "Show me all compliance gaps",
+  "Which pumps are overdue and at risk?",
+  "What does the SOP say after a seal replacement?",
 ];
 
 async function initCopilot() {
@@ -189,16 +194,39 @@ async function askCopilot() {
   renderAnswer(a);
 }
 
+function confRing(c) {
+  const r = 22, circ = 2 * Math.PI * r, off = circ * (1 - c);
+  const col = c >= 0.75 ? "var(--ok)" : c >= 0.5 ? "var(--warn)" : "var(--bad)";
+  return `<svg class="ring" width="60" height="60" viewBox="0 0 60 60">
+    <circle cx="30" cy="30" r="${r}" fill="none" stroke="var(--panel2)" stroke-width="6"/>
+    <circle cx="30" cy="30" r="${r}" fill="none" stroke="${col}" stroke-width="6"
+      stroke-linecap="round" stroke-dasharray="${circ.toFixed(1)}"
+      stroke-dashoffset="${circ.toFixed(1)}" transform="rotate(-90 30 30)"
+      style="transition:stroke-dashoffset 1.1s ease" data-off="${off.toFixed(1)}"/>
+    <text x="30" y="35" text-anchor="middle" font-size="15" font-weight="800"
+      fill="var(--text)">${pct(c)}</text></svg>`;
+}
+
+function tableHTML(t) {
+  if (!t || !t.rows || !t.rows.length) return "";
+  return `<div class="tbl-wrap"><table class="tbl"><thead><tr>` +
+    t.columns.map(c => `<th>${esc(c)}</th>`).join("") + `</tr></thead><tbody>` +
+    t.rows.map(r => `<tr>` + r.map(c => `<td>${esc(c)}</td>`).join("") + `</tr>`).join("") +
+    `</tbody></table></div>`;
+}
+
 function renderAnswer(a) {
   if (denied(a)) { $("#copilot-answer").innerHTML = lock(a); return; }
   if (a.error) { $("#copilot-answer").innerHTML = `<div class="answer">${esc(a.error)}</div>`; return; }
   const c = a.confidence;
   let html = `<div class="answer">
-    <div class="conf-row">
-      <span class="conf-badge ${confClass(c)}">Confidence ${pct(c)}%</span>
-      ${a.asset_id ? `<span class="muted">Asset ${esc(a.asset_id)}</span>` : ""}
-    </div>
-    <div class="summary">${esc(a.summary)}</div>`;
+    <div class="ans-head">
+      ${confRing(c)}
+      <div><div class="ans-conf-label">Confidence · ${esc((a.intent || "answer").replace(/_/g, " "))}</div>
+        <div class="summary">${esc(a.summary)}</div></div>
+    </div>`;
+
+  html += tableHTML(a.table);
 
   (a.sections || []).forEach(s => {
     html += `<div class="ans-block"><h4>${esc(s.heading)}</h4><p>${esc(s.body)}</p></div>`;
@@ -216,6 +244,26 @@ function renderAnswer(a) {
   }
   html += `</div>`;
   $("#copilot-answer").innerHTML = html;
+  // trigger the ring fill animation on next frame
+  const ring = $("#copilot-answer .ring circle[data-off]");
+  if (ring) requestAnimationFrame(() => { ring.style.strokeDashoffset = ring.dataset.off; });
+}
+
+function animateKpis(scope) {
+  $$(scope + " .kpi .v").forEach(el => {
+    const m = el.textContent.match(/^([\d,]+)(.*)$/);
+    if (!m) return;
+    const target = parseInt(m[1].replace(/,/g, ""), 10);
+    const suffix = m[2];
+    if (isNaN(target) || target === 0) return;
+    const steps = 22; let i = 0;
+    el.textContent = "0" + suffix;
+    const tick = setInterval(() => {
+      i++; const v = i >= steps ? target : Math.round((target / steps) * i);
+      el.textContent = v.toLocaleString() + suffix;
+      if (i >= steps) clearInterval(tick);
+    }, 20);
+  });
 }
 
 /* ---------------- risk tab + asset detail ---------------- */
@@ -290,19 +338,32 @@ async function openAsset(id) {
 
 function sparkline(points) {
   const vals = points.map(p => p.value);
-  const min = Math.min(...vals), max = Math.max(...vals);
-  const W = 600, H = 110, pad = 8;
-  const span = (max - min) || 1;
-  const pts = points.map((p, i) => {
-    const x = pad + (i / (points.length - 1 || 1)) * (W - 2 * pad);
-    const y = H - pad - ((p.value - min) / span) * (H - 2 * pad);
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(" ");
+  const W = 600, H = 140, padX = 10, padTop = 12, padBot = 22;
+  // fixed scale so the danger/alert thresholds are meaningful
+  const lo = 0, hi = Math.max(9.5, Math.max(...vals) + 0.5);
+  const X = i => padX + (i / (points.length - 1 || 1)) * (W - 2 * padX);
+  const Y = v => H - padBot - ((v - lo) / (hi - lo)) * (H - padTop - padBot);
+  const line = points.map((p, i) => `${X(i).toFixed(1)},${Y(p.value).toFixed(1)}`).join(" ");
+  const area = `${X(0)},${Y(lo)} ${line} ${X(points.length - 1)},${Y(lo)}`;
+  const last = points[points.length - 1];
+  const yThr = (v, label, col) => `
+    <line x1="${padX}" y1="${Y(v)}" x2="${W - padX}" y2="${Y(v)}" stroke="${col}"
+      stroke-width="1" stroke-dasharray="4 4" opacity="0.7"/>
+    <text x="${W - padX}" y="${Y(v) - 4}" text-anchor="end" fill="${col}"
+      font-size="11">${label} ${v}</text>`;
   return `<h4 style="margin-top:16px;color:var(--accent)">Vibration trend (mm/s)</h4>
     <svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
-      <polyline fill="none" stroke="#38bdf8" stroke-width="2" points="${pts}" />
-      <text x="10" y="16" fill="#91a0bd" font-size="11">max ${max.toFixed(1)}</text>
-      <text x="10" y="${H - 6}" fill="#91a0bd" font-size="11">min ${min.toFixed(1)}</text>
+      <defs><linearGradient id="vibfill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.35"/>
+        <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/></linearGradient></defs>
+      ${yThr(7.1, "danger", "#f87171")}
+      ${yThr(4.5, "alert", "#fbbf24")}
+      <polygon points="${area}" fill="url(#vibfill)"/>
+      <polyline fill="none" stroke="#38bdf8" stroke-width="2.5" points="${line}"/>
+      <circle cx="${X(points.length - 1).toFixed(1)}" cy="${Y(last.value).toFixed(1)}" r="4"
+        fill="#38bdf8"/>
+      <text x="${X(points.length - 1).toFixed(1)}" y="${(Y(last.value) - 8).toFixed(1)}"
+        text-anchor="end" fill="#e7edf7" font-size="12" font-weight="700">${last.value} now</text>
     </svg>`;
 }
 

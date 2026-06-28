@@ -27,9 +27,10 @@ RANDOM_SEED = int(os.environ.get("CHRONOS_SEED", "20260628"))
 # generated live trajectory always lines up. Override via env for live use.
 AS_OF = os.environ.get("CHRONOS_AS_OF", "2026-06-28T08:00:00")
 
-# Server defaults.
+# Server defaults. Cloud hosts (Render, Railway, Heroku) inject $PORT and need
+# the process bound to 0.0.0.0 — both are honoured automatically.
 HOST = os.environ.get("CHRONOS_HOST", "127.0.0.1")
-PORT = int(os.environ.get("CHRONOS_PORT", "8000"))
+PORT = int(os.environ.get("PORT") or os.environ.get("CHRONOS_PORT") or "8000")
 
 # Sequence-intelligence tuning.
 TRAJECTORY_WINDOW_DAYS = 21       # look-back window for precursor sequences

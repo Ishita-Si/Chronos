@@ -12,13 +12,21 @@ import sqlite3
 
 from ..util import clamp
 from ..ingest import extract
-from . import graph, sequence, rca, vectorstore
+from . import graph, sequence, rca, vectorstore, nlq
 
 
 def answer(conn, store: "vectorstore.VectorStore", question: str,
            asset_id: str | None = None) -> dict:
     tags = extract.extract_tags(question)
     asset_id = asset_id or (tags[0] if tags else None)
+
+    # Deeper-AI path: analytical / cross-asset questions go to the NL planner.
+    # A specific asset in focus always uses the rich single-asset path below.
+    if not asset_id:
+        analytical = nlq.try_analytical(conn, store, question)
+        if analytical is not None:
+            return analytical
+
     asset = graph.get_asset(conn, asset_id) if asset_id else None
 
     hits = store.search(question, k=6, asset_id=asset_id)
@@ -74,10 +82,12 @@ def answer(conn, store: "vectorstore.VectorStore", question: str,
         "asset_name": asset["name"] if asset else None,
         "summary": summary,
         "sections": sections,
+        "table": None,
         "recommended_actions": recommended,
         "risk": risk if (risk and risk.get("at_risk")) else None,
         "citations": citations,
         "confidence": confidence,
+        "intent": "asset" if asset else "fallback",
     }
 
 
