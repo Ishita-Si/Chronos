@@ -1,4 +1,4 @@
-# CHRONOS — Judge-proof demo script
+# CHRONOS — demo script
 
 **Setup (once):**
 ```bash
