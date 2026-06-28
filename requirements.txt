@@ -1,0 +1,13 @@
+# CHRONOS runs on the Python standard library ONLY — no packages required.
+#   python -m chronos.pipeline --reset
+#   python -m chronos.server
+#
+# Optional (development): test runner
+#   pytest>=7.0
+#
+# Optional (production swap-ins, NOT needed for the prototype):
+#   fastapi, uvicorn[standard]      # API server
+#   neo4j                            # temporal knowledge graph
+#   pgvector / weaviate-client       # vector store
+#   sentence-transformers            # semantic embeddings
+#   azure-ai-formrecognizer          # P&ID / scanned-document parsing
