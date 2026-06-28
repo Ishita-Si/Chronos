@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 260" font-family="monospace">
+  <!-- P&ID: Area-2 Utilities — Boiler Feed Water circuit.
+       Equipment tags are <text> nodes; <line> elements are process connections.
+       CHRONOS parses tags geometrically and infers connectivity from the
+       nearest tag node to each line endpoint. -->
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3"
+            orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#1f2a44"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="760" height="260" fill="#f7f9fc"/>
+
+  <!-- process connection lines -->
+  <line x1="140" y1="150" x2="240" y2="150" stroke="#1f2a44" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="320" y1="150" x2="430" y2="150" stroke="#1f2a44" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="515" y1="150" x2="610" y2="150" stroke="#1f2a44" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="280" y1="90"  x2="280" y2="128" stroke="#1f2a44" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- V-7 suction knockout drum -->
+  <rect x="60" y="120" width="80" height="60" rx="14" fill="#dde7f5" stroke="#1f2a44"/>
+  <text x="100" y="154" text-anchor="middle" font-size="14" fill="#0b1120">V-7</text>
+
+  <!-- P-204 pump -->
+  <circle cx="280" cy="150" r="34" fill="#dde7f5" stroke="#1f2a44"/>
+  <text x="280" y="154" text-anchor="middle" font-size="14" fill="#0b1120">P-204</text>
+
+  <!-- FCV-204 flow control valve -->
+  <rect x="245" y="50" width="70" height="30" fill="#dde7f5" stroke="#1f2a44"/>
+  <text x="280" y="70" text-anchor="middle" font-size="12" fill="#0b1120">FCV-204</text>
+
+  <!-- HX-11 heat exchanger -->
+  <rect x="425" y="115" width="90" height="70" fill="#dde7f5" stroke="#1f2a44"/>
+  <text x="470" y="154" text-anchor="middle" font-size="14" fill="#0b1120">HX-11</text>
+
+  <!-- TK-2 storage tank -->
+  <rect x="610" y="115" width="80" height="70" rx="8" fill="#dde7f5" stroke="#1f2a44"/>
+  <text x="650" y="154" text-anchor="middle" font-size="14" fill="#0b1120">TK-2</text>
+
+  <text x="20" y="30" font-size="13" fill="#1f2a44">P&amp;ID PID-AREA2 — Boiler Feed Water Circuit (Rev B)</text>
+</svg>
