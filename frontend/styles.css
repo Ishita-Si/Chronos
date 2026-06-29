@@ -47,9 +47,12 @@ body {
   padding-bottom: 64px;
   position: relative;
 }
-/* fixed background: blueprint grid + corner glows */
+/* WebGL ambient canvas (covers the CSS fallback when active) */
+#bg { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: -1; display: block; }
+
+/* fixed background fallback: blueprint grid + corner glows (under the canvas) */
 body::before {
-  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  content: ""; position: fixed; inset: 0; z-index: -2; pointer-events: none;
   background-image:
     linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px),
@@ -336,3 +339,63 @@ main { padding: 22px 18px; max-width: 940px; margin: 0 auto; }
 .spin { text-align: center; color: var(--muted); padding: 34px; font-family: var(--f-mono); font-size: 12.5px; letter-spacing: .5px; }
 .spin::before { content: "▚ "; color: var(--amber); animation: blink 1s steps(2) infinite; }
 @keyframes blink { 50% { opacity: .3; } }
+
+/* ============================================================
+   MOTION DESIGN
+   ============================================================ */
+@keyframes revealUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: no-preference) {
+  .kpi, .card, .qa, .gap, .ans-block, .banner, .attention-card, .answer,
+  .detail-panel, .tbl-wrap, .cite { animation: revealUp .5s both cubic-bezier(.2,.7,.2,1); }
+  /* staggered entrances per container */
+  .kpi-grid .kpi:nth-child(2), .quick-grid .qa:nth-child(2), .cards .card:nth-child(2) { animation-delay: .06s; }
+  .kpi-grid .kpi:nth-child(3), .quick-grid .qa:nth-child(3), .cards .card:nth-child(3) { animation-delay: .12s; }
+  .kpi-grid .kpi:nth-child(4), .cards .card:nth-child(4) { animation-delay: .18s; }
+  .kpi-grid .kpi:nth-child(5), .cards .card:nth-child(5) { animation-delay: .24s; }
+  .kpi-grid .kpi:nth-child(6), .cards .card:nth-child(6) { animation-delay: .30s; }
+  .cards .card:nth-child(7) { animation-delay: .36s; }
+  .cards .card:nth-child(8) { animation-delay: .42s; }
+  #comp-gaps .gap:nth-child(2) { animation-delay: .05s; }
+  #comp-gaps .gap:nth-child(3) { animation-delay: .10s; }
+  #comp-gaps .gap:nth-child(4) { animation-delay: .15s; }
+  #comp-gaps .gap:nth-child(5) { animation-delay: .20s; }
+  #comp-gaps .gap:nth-child(6) { animation-delay: .25s; }
+  /* copilot answer blocks reveal in sequence */
+  .answer .ans-block:nth-child(2) { animation-delay: .08s; }
+  .answer .ans-block:nth-child(3) { animation-delay: .16s; }
+  .answer .ans-block:nth-child(4) { animation-delay: .24s; }
+  .answer .ans-block:nth-child(5) { animation-delay: .32s; }
+  .answer .cite:nth-child(2) { animation-delay: .05s; }
+  .answer .cite:nth-child(3) { animation-delay: .10s; }
+}
+
+/* skeleton shimmer loaders */
+.skel-wrap { display: grid; gap: 10px; padding: 6px 0; }
+.skel { height: 14px; border-radius: var(--r-sm); background: linear-gradient(90deg, var(--panel) 25%, var(--panel-2) 38%, var(--panel) 60%); background-size: 300% 100%; animation: shimmer 1.3s linear infinite; }
+.skel.lg { height: 52px; }
+.skel.w60 { width: 60%; } .skel.w40 { width: 40%; } .skel.w80 { width: 80%; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -100% 0; } }
+
+/* hero waveform inside the attention card */
+.ac-wave { margin: 14px 0 4px; }
+.ac-wave svg { width: 100%; height: 66px; display: block; }
+.ac-wave .trace { stroke: var(--amber); stroke-width: 2; fill: none;
+  stroke-dasharray: 1400; stroke-dashoffset: 1400; animation: draw 1.9s cubic-bezier(.4,.1,.2,1) forwards .25s; }
+.ac-wave .trace-fill { fill: url(#wavefill); opacity: 0; animation: fadein 1.2s forwards 1.4s; }
+.ac-wave .danger { stroke: var(--bad); stroke-width: 1; stroke-dasharray: 4 4; opacity: .55; }
+.ac-wave .pdot { fill: var(--amber); opacity: 0; animation: fadein .4s forwards 1.9s, pdot 1.6s ease-in-out 2s infinite; }
+.ac-wave .lbl { fill: var(--faint); font-family: var(--f-mono); font-size: 9px; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes fadein { to { opacity: 1; } }
+@keyframes pdot { 0%,100% { r: 3.5; } 50% { r: 6; } }
+
+/* refined card hover glow */
+.qa, .card, .kpi { transition: border-color .18s, transform .18s, box-shadow .18s; }
+.qa:hover, .card:hover { box-shadow: 0 10px 30px rgba(0,0,0,.4), 0 0 0 1px rgba(247,169,50,.12); }
+
+/* topbar subtle moving sheen */
+.topbar { position: sticky; overflow: hidden; }
+.topbar::after { content: ""; position: absolute; top: 0; left: -40%; width: 40%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(247,169,50,.05), transparent);
+  animation: sheen 9s linear infinite; pointer-events: none; }
+@keyframes sheen { from { left: -40%; } to { left: 120%; } }

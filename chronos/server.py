@@ -26,7 +26,7 @@ from .eval import benchmark
 _STORE: vectorstore.VectorStore | None = None
 _ctx = threading.local()   # holds the resolved role per request
 _STATIC = {"/": "index.html", "/index.html": "index.html",
-           "/app.js": "app.js", "/styles.css": "styles.css"}
+           "/app.js": "app.js", "/styles.css": "styles.css", "/bg.js": "bg.js"}
 _CTYPE = {"html": "text/html", "js": "application/javascript",
           "css": "text/css", "json": "application/json"}
 

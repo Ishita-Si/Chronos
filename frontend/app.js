@@ -121,14 +121,48 @@ function attentionCard(r) {
         <div class="ac-sub">currently at: ${esc(humanStage(r.current_stage))}</div></div>
       <span class="pill ${esc(r.criticality || "C")}">${esc(r.criticality || "")}</span>
     </div>
-    <p class="ac-msg">This equipment is repeating a failure pattern that has ended in a
-      trip <b>${cases} time${cases > 1 ? "s" : ""}</b> before. At the current pace it could
-      trip <b>${lead}</b>.</p>
+    <p class="ac-msg">This equipment is tracing a failure pattern that has ended in a
+      trip <b>${cases} time${cases > 1 ? "s" : ""}</b> before on similar pumps. Its live
+      signature now matches that pathway at <b>${pct(r.confidence)}% confidence</b> — at the
+      current pace it could trip <b>${lead}</b>. Acting now breaks the chain.</p>
+    ${heroWave()}
     <div class="ac-actions">
       <button class="btn-primary" data-ask="${esc(r.asset_id)}">See the recommended fix →</button>
       <button class="btn-ghost" data-open="${esc(r.asset_id)}">View timeline</button>
     </div>
   </div>`;
+}
+
+/* self-drawing vibration waveform: signal rising past the danger threshold */
+function heroWave() {
+  const W = 600, H = 66, N = 46, dangerY = 15;
+  let d = "", area = "";
+  for (let i = 0; i < N; i++) {
+    const t = i / (N - 1);
+    const x = t * W;
+    const base = 52 - t * t * 30;                 // drifts upward (worsening)
+    const amp = 1.2 + t * t * 6.5;                // oscillation grows (chatter)
+    const y = Math.max(6, base - amp * Math.sin(i * 0.9) - amp * 0.4 * Math.sin(i * 2.3));
+    d += (i ? "L" : "M") + x.toFixed(1) + "," + y.toFixed(1) + " ";
+    area += x.toFixed(1) + "," + y.toFixed(1) + " ";
+  }
+  return `<div class="ac-wave"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <defs><linearGradient id="wavefill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f7a932" stop-opacity=".30"/>
+      <stop offset="100%" stop-color="#f7a932" stop-opacity="0"/></linearGradient></defs>
+    <line class="danger" x1="0" y1="${dangerY}" x2="${W}" y2="${dangerY}"/>
+    <text class="lbl" x="4" y="${dangerY - 3}">TRIP THRESHOLD</text>
+    <polygon class="trace-fill" points="0,${H} ${area} ${W},${H}"/>
+    <path class="trace" d="${d}"/>
+    <circle class="pdot" cx="${W}" cy="6" r="3.5"/>
+  </svg></div>`;
+}
+
+function skeleton(rows) {
+  const lines = ["w80", "w60", "", "w40"];
+  let h = `<div class="skel-wrap">`;
+  for (let i = 0; i < (rows || 4); i++) h += `<div class="skel ${lines[i % lines.length]}"></div>`;
+  return h + `</div>`;
 }
 
 const qa = (icon, title, sub, go) => `<div class="qa" data-go="${go}">
@@ -186,7 +220,8 @@ async function askCopilot() {
   const question = $("#copilot-q").value.trim();
   if (!question) return;
   const asset_id = $("#copilot-asset").value || null;
-  $("#copilot-answer").innerHTML = `<div class="spin">Searching plant memory…</div>`;
+  $("#copilot-answer").innerHTML =
+    `<div class="answer"><div class="ans-conf-label">⟢ retrieving from knowledge graph + documents…</div>${skeleton(4)}</div>`;
   const a = await api("/api/copilot", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ question, asset_id }),
@@ -475,7 +510,7 @@ async function loadPID() {
 /* ---------------- benchmark ---------------- */
 async function loadBenchmark() {
   const el = $("#benchmark");
-  el.innerHTML = `<div class="spin">Running evaluation harness…</div>`;
+  el.innerHTML = `<div class="ans-conf-label" style="margin-bottom:10px">⟢ running evaluation harness…</div>${skeleton(5)}`;
   const b = await api("/api/benchmark");
   if (denied(b)) { el.innerHTML = lock(b); return; }
   const ee = b.entity_extraction, pe = b.pid_extraction, sp = b.sequence_prediction,

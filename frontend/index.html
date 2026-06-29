@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
+  <canvas id="bg" aria-hidden="true"></canvas>
   <header class="topbar">
     <div class="brand">
       <span class="logo" aria-hidden="true">
@@ -70,7 +71,10 @@
     <section id="view-copilot" class="view">
       <div class="copilot-head">
         <h2 class="section-title">Memory Copilot</h2>
-        <p class="muted">Source-backed answers from decades of plant memory.</p>
+        <p class="muted">Ask in plain English. CHRONOS searches the temporal knowledge graph
+          and document corpus, reasons across alarms, work orders, inspections and SOPs, and
+          replies with a confidence score and citations to the exact source records — including
+          analytical questions like “which pumps are overdue <i>and</i> at risk?”.</p>
       </div>
       <div class="ask-row">
         <select id="copilot-asset"></select>
@@ -85,11 +89,14 @@
     <!-- RISK / ASSET DETAIL -->
     <section id="view-risk" class="view">
       <h2 class="section-title">Your equipment</h2>
-      <p class="muted">Tap any asset to see its history, risk and recommended actions.</p>
+      <p class="muted">Every asset is scored live against the learned failure trajectories.
+        Tap one to open its event timeline, vibration trend, connected equipment, a what-if
+        simulation, and an evidence-backed root-cause analysis.</p>
       <div id="risk-assets" class="cards"></div>
       <div id="asset-detail"></div>
       <h2 class="section-title">Failure patterns the system has learned</h2>
-      <p class="muted">Recurring sequences mined from past failures — the early-warning signatures.</p>
+      <p class="muted">Recurring precursor sequences mined from past trips — the early-warning
+        signatures the detector matches live equipment against, with their support count.</p>
       <div id="trajectories" class="cards"></div>
     </section>
 
@@ -125,6 +132,7 @@
     <span>CHRONOS · Temporal Industrial Knowledge Graph + Sequence Intelligence</span>
   </footer>
 
+  <script src="/bg.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>
