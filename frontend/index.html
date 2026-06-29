@@ -30,39 +30,52 @@
     </div>
     <div class="topright">
       <div class="sysstat"><span class="live-dot"></span>LIVE</div>
-      <select id="role-select" title="Active role (RBAC)">
-        <option value="eng-demo">Engineer</option>
-        <option value="tech-demo">Technician</option>
-        <option value="comp-demo">Compliance</option>
-        <option value="admin-demo">Admin</option>
-      </select>
+      <button id="help-btn" class="help-btn" title="How to use CHRONOS">?</button>
+      <label class="role-wrap" title="You're viewing as this role (controls what you can access)">
+        <span class="role-lbl">VIEW AS</span>
+        <select id="role-select">
+          <option value="eng-demo">Engineer</option>
+          <option value="tech-demo">Technician</option>
+          <option value="comp-demo">Compliance Officer</option>
+          <option value="admin-demo">Admin</option>
+        </select>
+      </label>
       <div id="asof" class="asof"></div>
     </div>
   </header>
 
   <nav class="tabs" id="tabs">
-    <button data-view="dashboard" class="active">Home</button>
+    <button data-view="dashboard" class="active">Overview</button>
     <button data-view="copilot">Ask</button>
-    <button data-view="risk">Risk</button>
-    <button data-view="pid">P&amp;ID</button>
+    <button data-view="risk">Predictions</button>
+    <button data-view="pid">Equipment</button>
     <button data-view="compliance">Compliance</button>
-    <button data-view="benchmark">Benchmark</button>
+    <button data-view="benchmark">Accuracy</button>
   </nav>
+  <div id="view-context" class="view-context"></div>
 
   <main id="app">
     <!-- DASHBOARD -->
     <section id="view-dashboard" class="view active">
+      <div class="hero-intro">
+        <h2 class="hero-h">Good day. Here's your plant, at a glance.</h2>
+        <p class="hero-p">CHRONOS quietly reads every alarm, work order, inspection and manual,
+          then surfaces the one thing that needs you. No searching — it comes to you.</p>
+      </div>
+
       <div id="status-banner"></div>
       <div id="attention"></div>
 
-      <h2 class="section-title">What would you like to do?</h2>
+      <h2 class="section-title">Start here</h2>
       <div id="quick-actions" class="quick-grid"></div>
 
-      <h2 class="section-title">Your plant at a glance</h2>
+      <h2 class="section-title">Your plant by the numbers</h2>
       <div id="glance" class="kpi-grid"></div>
 
       <details id="under-hood">
-        <summary>Knowledge engine · under the hood</summary>
+        <summary>For the curious — what's running under the hood</summary>
+        <p class="muted" style="margin:2px 0 12px">The engine that powers the above: a temporal
+          knowledge graph linking every record, with searchable passages and mined failure patterns.</p>
         <div id="kpis" class="kpi-grid"></div>
       </details>
     </section>
@@ -131,6 +144,41 @@
   <footer class="foot">
     <span>CHRONOS · Temporal Industrial Knowledge Graph + Sequence Intelligence</span>
   </footer>
+
+  <!-- first-run welcome -->
+  <div id="welcome" class="overlay" hidden>
+    <div class="welcome-card">
+      <div class="welcome-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none"><rect x="2" y="2" width="28" height="28" rx="8" stroke="currentColor" stroke-width="1.3" opacity=".45"/><circle cx="16" cy="16" r="8.4" stroke="currentColor" stroke-width="1.5"/><path d="M16 16V9.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16 16l4.6 2.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="16" r="1.8" fill="currentColor"/></svg>
+      </div>
+      <h2>Welcome to CHRONOS</h2>
+      <p class="welcome-lead">Your plant already holds the clues to its next breakdown — scattered
+        across alarms, work orders, inspections and manuals nobody has time to connect.
+        <b>CHRONOS reads all of it and warns you before equipment fails</b> — in plain language.</p>
+      <div class="welcome-grid">
+        <div class="wc">
+          <span class="wc-ic"><svg viewBox="0 0 24 24"><path d="M4 5h16v10H8l-4 4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></span>
+          <b>Ask anything</b>
+          <p>“Why does P-204 keep vibrating?” — get a clear answer with its sources.</p>
+        </div>
+        <div class="wc">
+          <span class="wc-ic"><svg viewBox="0 0 24 24"><path d="M12 3l9 16H3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 9v5M12 16.5v.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
+          <b>See what's about to fail</b>
+          <p>CHRONOS spots failure patterns early and tells you how long you have.</p>
+        </div>
+        <div class="wc">
+          <span class="wc-ic"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 9l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <b>Prove compliance</b>
+          <p>Find missing inspections and build an audit pack in one click.</p>
+        </div>
+      </div>
+      <div class="welcome-actions">
+        <button class="btn-primary" id="start-tour">Take the 60-second tour</button>
+        <button class="btn-ghost" id="skip-welcome">I'll explore on my own</button>
+      </div>
+      <p class="welcome-foot">A live demo on a realistic synthetic plant. Nothing here affects real equipment.</p>
+    </div>
+  </div>
 
   <script src="/bg.js"></script>
   <script src="/app.js"></script>

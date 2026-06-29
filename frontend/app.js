@@ -26,11 +26,23 @@ $$("#tabs button").forEach(b => b.addEventListener("click", () => {
   $$(".view").forEach(v => v.classList.remove("active"));
   b.classList.add("active");
   $("#view-" + b.dataset.view).classList.add("active");
+  updateContext(b.dataset.view);
   if (b.dataset.view === "risk") loadRiskTab();
   if (b.dataset.view === "compliance") loadCompliance();
   if (b.dataset.view === "pid") loadPID();
   if (b.dataset.view === "benchmark") loadBenchmark();
 }));
+
+/* plain-language context line under the tabs */
+const VIEW_INFO = {
+  dashboard: "<b>Overview</b> — the one thing that needs you right now, plus your plant by the numbers.",
+  copilot: "<b>Ask</b> — type any question in plain English; CHRONOS answers with a confidence score and sources.",
+  risk: "<b>Predictions</b> — every machine scored for how likely it is to fail, and roughly when.",
+  pid: "<b>Equipment</b> — the plant map, read automatically from your P&ID engineering drawings.",
+  compliance: "<b>Compliance</b> — which inspections are overdue, with audit-ready evidence in one click.",
+  benchmark: "<b>Accuracy</b> — how well CHRONOS performs, measured against known correct answers.",
+};
+function updateContext(v) { const el = $("#view-context"); if (el) el.innerHTML = VIEW_INFO[v] || ""; }
 
 /* role selector (RBAC) */
 const roleSel = $("#role-select");
@@ -544,6 +556,74 @@ async function loadBenchmark() {
     </div>`;
 }
 
+/* ---------------- onboarding + guided tour ---------------- */
+function hideWelcome() { const w = $("#welcome"); if (w) w.hidden = true; try { localStorage.setItem("chronos_seen", "1"); } catch (e) {} }
+$("#skip-welcome") && $("#skip-welcome").addEventListener("click", hideWelcome);
+$("#start-tour") && $("#start-tour").addEventListener("click", () => { hideWelcome(); startTour(); });
+$("#help-btn") && $("#help-btn").addEventListener("click", () => { hideWelcome(); startTour(); });
+
+const TOUR = [
+  { sel: "#status-banner", step: "1 / 5", title: "Plant status", body: "A plain-language headline telling you whether anything needs your attention right now." },
+  { sel: "#attention", step: "2 / 5", title: "Early warning", body: "CHRONOS noticed this machine entering a known failure pattern — and how long you likely have. The button gives you a sourced, step-by-step fix." },
+  { sel: '[data-view="copilot"]', step: "3 / 5", title: "Ask anything", body: "Type a question in plain English. You get a clear answer with a confidence score and links to the exact records behind it." },
+  { sel: '[data-view="risk"]', step: "4 / 5", title: "Predictions", body: "See every machine scored for failure risk, open its full timeline, and simulate “fix now vs wait a week.”" },
+  { sel: '[data-view="compliance"]', step: "5 / 5", title: "Compliance", body: "Instantly find overdue inspections and generate an audit-ready evidence pack — no more digging through folders." },
+];
+let tourI = 0, tourEls = null;
+
+function startTour() {
+  const home = $('[data-view="dashboard"]');
+  if (home && !home.classList.contains("active")) home.click();
+  tourI = 0;
+  if (!tourEls) {
+    const hole = document.createElement("div"); hole.className = "tour-hole";
+    const bubble = document.createElement("div"); bubble.className = "tour-bubble";
+    document.body.appendChild(hole); document.body.appendChild(bubble);
+    tourEls = { hole, bubble };
+    window.addEventListener("resize", positionTour);
+  }
+  showTourStep();
+}
+function endTour() {
+  if (tourEls) { tourEls.hole.remove(); tourEls.bubble.remove(); tourEls = null; }
+  window.removeEventListener("resize", positionTour);
+  try { localStorage.setItem("chronos_seen", "1"); } catch (e) {}
+}
+function showTourStep() {
+  const s = TOUR[tourI];
+  const dots = TOUR.map((_, i) => `<span class="dot ${i === tourI ? "on" : ""}"></span>`).join("");
+  tourEls.bubble.innerHTML =
+    `<div class="tour-step">${esc(s.step)} · guided tour</div><h4>${esc(s.title)}</h4><p>${esc(s.body)}</p>
+     <div class="tour-nav"><button class="tour-skip">Skip</button><div class="dots">${dots}</div>
+     <button class="tour-next">${tourI === TOUR.length - 1 ? "Got it" : "Next →"}</button></div>`;
+  tourEls.bubble.querySelector(".tour-skip").onclick = endTour;
+  tourEls.bubble.querySelector(".tour-next").onclick = () => {
+    if (tourI >= TOUR.length - 1) endTour(); else { tourI++; showTourStep(); }
+  };
+  positionTour();
+}
+function positionTour() {
+  if (!tourEls) return;
+  const t = document.querySelector(TOUR[tourI].sel);
+  if (!t) return;
+  t.scrollIntoView({ behavior: "smooth", block: "center" });
+  setTimeout(() => {
+    if (!tourEls) return;
+    const r = t.getBoundingClientRect(), pad = 8, b = tourEls.bubble, hole = tourEls.hole;
+    hole.style.left = (r.left - pad) + "px"; hole.style.top = (r.top - pad) + "px";
+    hole.style.width = (r.width + pad * 2) + "px"; hole.style.height = (r.height + pad * 2) + "px";
+    const bw = Math.min(320, window.innerWidth * 0.9);
+    const left = Math.max(12, Math.min(r.left, window.innerWidth - bw - 12));
+    b.style.left = left + "px";
+    const bh = b.offsetHeight || 180;
+    let top = r.bottom + 14;
+    if (top + bh > window.innerHeight - 12) top = Math.max(12, r.top - bh - 14);
+    b.style.top = top + "px";
+  }, 200);
+}
+
 /* ---------------- boot ---------------- */
+updateContext("dashboard");
 loadDashboard();
 initCopilot();
+try { if (!localStorage.getItem("chronos_seen")) setTimeout(() => { const w = $("#welcome"); if (w) w.hidden = false; }, 450); } catch (e) {}
