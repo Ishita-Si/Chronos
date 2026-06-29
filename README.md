@@ -289,9 +289,3 @@ var/                   generated artefacts + DB (git-ignored)
 
 ---
 
-## 🎤 30-second pitch
-
-> *CHRONOS converts decades of ignored operational traces into a living decision
-> system. It links alarms, maintenance, SOPs, inspections and P&IDs into one
-> temporal memory, detects repeat failure pathways before downtime occurs, and
-> gives field teams source-backed actions in real time.*
