@@ -73,9 +73,9 @@ async function loadDashboard() {
 
   // 3) quick actions
   $("#quick-actions").innerHTML = [
-    qa("💬", "Ask the plant brain", "Get a source-backed answer in seconds", "copilot"),
-    qa("⚠", "Check what's at risk", "See assets trending toward failure", "risk"),
-    qa("✓", "Review compliance", "Find missing inspection evidence", "compliance"),
+    qa("01", "Ask the plant brain", "Get a source-backed answer in seconds", "copilot"),
+    qa("02", "Check what's at risk", "See assets trending toward failure", "risk"),
+    qa("03", "Review compliance", "Find missing inspection evidence", "compliance"),
   ].join("");
   $$("#quick-actions .qa").forEach(c =>
     c.addEventListener("click", () => $(`[data-view="${c.dataset.go}"]`).click()));
