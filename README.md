@@ -19,7 +19,7 @@ one command serves the app.
 
 ---
 
-## ⏱ Quick start (60 seconds, no pip install)
+## Quick start
 
 ```bash
 # 1. Build the plant memory (generate data -> graph -> indexes)
@@ -42,7 +42,7 @@ Requires **Python 3.10+**. No external packages are needed to run.
 
 ---
 
-## 🧠 What makes it different
+## What makes it different
 
 | Capability | Standard RAG copilot | CHRONOS |
 |---|---|---|
@@ -59,7 +59,7 @@ Requires **Python 3.10+**. No external packages are needed to run.
 
 ---
 
-## 🏗 Architecture
+## Architecture
 
 ```mermaid
 flowchart TB
@@ -117,7 +117,7 @@ flowchart TB
 
 ---
 
-## 🔩 Functional modules
+## Functional modules
 
 | # | Module | Where |
 |---|---|---|
@@ -133,7 +133,7 @@ flowchart TB
 
 ---
 
-## 📊 Data model
+## Data model
 
 **Nodes:** Asset · Event (alarm/trip/reading/work-order/inspection/bypass) ·
 Document · Clause · Person · (Action & Outcome captured as event subtypes).
@@ -145,47 +145,7 @@ Document · Clause · Person · (Action & Outcome captured as event subtypes).
 
 ---
 
-## 🎬 Demo flows
-
-- **Flow A — Field technician (mobile):** the **🏠 Home** screen opens with a plain
-  -language *"Needs attention now"* card for P-204; tap **"See the recommended
-  fix →"** (or use **💬 Ask**) → 3 similar past cases, the common precursor
-  sequence, likely root cause (misalignment post seal replacement), a recommended
-  action checklist, and citations.
-- **Flow B — Reliability engineer:** **⚠ Risk** tab → P-204 flagged at risk with
-  lead time to trip → open the asset → **Simulate** *act today vs defer 7 days*
-  → risk-reduction estimate.
-- **Flow C — Compliance officer:** **✓ Compliance** tab → clause-by-clause evidence
-  map → click a gap → audit-ready evidence pack.
-
-A full screen-by-screen script is in [`DEMO.md`](DEMO.md).
-
----
-
-## ☁️ Deploy (live demo)
-
-CHRONOS is a single self-contained process that builds its own data on startup,
-so it hosts trivially. It honours `$PORT` and `CHRONOS_HOST` for cloud platforms.
-
-**Render (free, recommended):** push the repo, then *New → Blueprint* and pick it —
-[`render.yaml`](render.yaml) does the rest. Or *New → Web Service* with
-build `python -m chronos.pipeline --reset`, start `python -m chronos.server`, and
-env `CHRONOS_HOST=0.0.0.0`.
-
-**Docker (anywhere):**
-```bash
-docker build -t chronos .
-docker run -p 8000:8000 chronos        # http://localhost:8000
-```
-
-**Railway / Heroku-style:** the [`Procfile`](Procfile) is ready to go.
-
-> Free tiers sleep on inactivity, so the first request after idle takes a few
-> seconds to wake + rebuild the in-memory indexes. Subsequent requests are instant.
-
----
-
-## 🔐 Security & deployment
+## Security & deployment
 
 - **RBAC**: tokens → roles (`technician`, `engineer`, `compliance`, `admin`) →
   scopes. Every API route is authorised against the role; denied calls are
@@ -204,7 +164,7 @@ docker run -p 8000:8000 chronos        # http://localhost:8000
 
 ---
 
-## 📈 Benchmarks (`python -m chronos.eval.benchmark`)
+## Benchmarks (`python -m chronos.eval.benchmark`)
 
 Measured on the bundled synthetic plant:
 
@@ -224,7 +184,7 @@ Measured on the bundled synthetic plant:
 
 ---
 
-## 🧪 Tests
+## Tests
 
 ```bash
 python tests/test_engine.py        # no pytest needed
@@ -233,7 +193,7 @@ python tests/test_engine.py        # no pytest needed
 
 ---
 
-## 🗂 About the data (important, and honest)
+## About the data (important, and honest)
 
 Real SCADA/CMMS data is proprietary and cannot ship in a public repo. CHRONOS
 therefore **generates a realistic synthetic plant** ([`datagen/generator.py`](chronos/datagen/generator.py))
@@ -251,7 +211,7 @@ The generator is deterministic (fixed seed), so every run is reproducible.
 
 ---
 
-## 🔁 Production swap-ins
+## Production swap-ins
 
 The prototype is intentionally dependency-free; each component has a documented
 production upgrade with an identical interface:
@@ -267,7 +227,7 @@ production upgrade with an identical interface:
 
 ---
 
-## 📁 Repository layout
+## Repository layout
 
 ```
 chronos/
@@ -288,4 +248,4 @@ var/                   generated artefacts + DB (git-ignored)
 ```
 
 ---
-
+UnderProcess
