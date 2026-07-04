@@ -1,6 +1,0 @@
-var/
-.claude/
-__pycache__/
-*.pyc
-.git/
-# NOTE: do not ignore *.md — data/sops/*.md are part of the ingested corpus.
