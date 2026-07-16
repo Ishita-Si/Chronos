@@ -371,6 +371,65 @@ main { padding: 22px 18px; max-width: 940px; margin: 0 auto; }
 }
 #import-csv:focus { outline: none; border-color: rgba(247,169,50,.6); }
 
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(5,7,10,.74);
+  backdrop-filter: blur(8px);
+}
+.auth-card {
+  width: min(420px, 94vw);
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r);
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+.auth-card h3 {
+  font-family: var(--f-display);
+  font-size: 20px;
+  margin: 0 0 8px;
+}
+.auth-card label {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  font-family: var(--f-mono);
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.auth-card input {
+  background: var(--ink-2);
+  color: var(--text);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+  padding: 11px 12px;
+  font-family: var(--f-sans);
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.auth-card input:focus { outline: none; border-color: rgba(247,169,50,.65); }
+.auth-error {
+  min-height: 18px;
+  margin-top: 10px;
+  color: var(--bad);
+  font-size: 12.5px;
+}
+.auth-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
 /* ---------------- compliance ---------------- */
 .gap { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 13px 15px; margin: 9px 0; display: flex; justify-content: space-between; gap: 12px; align-items: center; cursor: pointer; transition: .16s; }
 .gap:hover { border-color: var(--line-2); transform: translateX(2px); }

@@ -8,6 +8,7 @@ const pct = (x) => Math.round((x || 0) * 100);
 
 let TOKEN = "eng-demo";
 let AUTH_IDENTITIES = [];
+let CURRENT_ID = "engineer";
 async function api(path, opts = {}) {
   opts.headers = Object.assign({ "X-CHRONOS-Token": TOKEN }, opts.headers || {});
   const r = await fetch(path, opts);
@@ -48,12 +49,16 @@ function updateContext(v) { const el = $("#view-context"); if (el) el.innerHTML 
 /* role selector (RBAC) */
 const roleSel = $("#role-select");
 if (roleSel) roleSel.addEventListener("change", async () => {
-  TOKEN = roleSel.value;
-  const who = await api("/api/whoami");
-  $("#asof").dataset.role = who.role;
-  const active = $("#tabs button.active");
-  if (active) active.click();        // re-render current view under new role
-  loadDashboard();
+  const next = AUTH_IDENTITIES.find(x => x.id === roleSel.value);
+  if (!next) return;
+  const ok = await requestRoleAuth(next);
+  if (!ok) {
+    roleSel.value = CURRENT_ID;
+    return;
+  }
+  CURRENT_ID = next.id;
+  TOKEN = next.token;
+  await refreshForRole();
 });
 
 async function initAuthDemo() {
@@ -62,9 +67,51 @@ async function initAuthDemo() {
   AUTH_IDENTITIES = d.identities;
   const preferred = AUTH_IDENTITIES.find(x => x.role === "engineer") || AUTH_IDENTITIES[0];
   roleSel.innerHTML = AUTH_IDENTITIES.map(x =>
-    `<option value="${esc(x.token)}">${esc(x.name)}</option>`).join("");
-  roleSel.value = preferred.token;
+    `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join("");
+  roleSel.value = preferred.id;
+  CURRENT_ID = preferred.id;
   TOKEN = preferred.token;
+}
+
+async function refreshForRole() {
+  const who = await api("/api/whoami");
+  $("#asof").dataset.role = who.role;
+  const active = $("#tabs button.active");
+  if (active) active.click();        // re-render current view under new role
+  loadDashboard();
+}
+
+function requestRoleAuth(identity) {
+  return new Promise(resolve => {
+    const overlay = document.createElement("div");
+    overlay.className = "auth-overlay";
+    overlay.innerHTML = `<div class="auth-card">
+      <div class="ans-conf-label">Demo JWT authentication</div>
+      <h3>Switch to ${esc(identity.name)}</h3>
+      <p class="muted">Enter the demo ID and password from the README to mint this role's JWT.</p>
+      <label>ID<input id="auth-id" autocomplete="username" value="${esc(identity.id)}"></label>
+      <label>Password<input id="auth-pass" autocomplete="current-password" type="password" placeholder="${esc(identity.password)}"></label>
+      <div id="auth-error" class="auth-error"></div>
+      <div class="auth-actions">
+        <button class="btn-ghost" id="auth-cancel">Cancel</button>
+        <button class="btn-primary" id="auth-submit">Authenticate</button>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+    const finish = (ok) => { overlay.remove(); resolve(ok); };
+    $("#auth-cancel", overlay).onclick = () => finish(false);
+    $("#auth-submit", overlay).onclick = () => {
+      const id = $("#auth-id", overlay).value.trim();
+      const pass = $("#auth-pass", overlay).value;
+      if (id === identity.id && pass === identity.password) finish(true);
+      else $("#auth-error", overlay).textContent = "ID or password does not match this demo role.";
+    };
+    $("#auth-pass", overlay).addEventListener("keydown", e => {
+      if (e.key === "Enter") $("#auth-submit", overlay).click();
+      if (e.key === "Escape") finish(false);
+    });
+    $("#auth-pass", overlay).focus();
+  });
 }
 
 /* ---------------- dashboard ---------------- */
