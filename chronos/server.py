@@ -13,6 +13,8 @@ from __future__ import annotations
 import json
 import re
 import threading
+import csv
+import io
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
@@ -159,6 +161,22 @@ def api_benchmark(conn, q, body):
     return benchmark.run_all()
 
 
+def api_auth_demo(conn, q, body):
+    return {"identities": security.demo_identities(),
+            "note": "Demo JWTs only. Passwords are intentionally non-secret."}
+
+
+def api_import_preview(conn, q, body):
+    rows = (body or {}).get("rows")
+    csv_text = (body or {}).get("csv_text")
+    if rows is None:
+        if csv_text:
+            rows = list(csv.DictReader(io.StringIO(csv_text)))
+        else:
+            rows = _sample_import_rows()
+    return _preview_import(rows)
+
+
 def api_audit(conn, q, body):
     limit = int((q.get("limit") or ["50"])[0])
     return {"entries": security.read_audit(limit), "count": security.audit_count()}
@@ -198,12 +216,98 @@ ROUTES = [
     ("GET", r"/api/pid$", api_pid_list),
     ("GET", r"/api/pid/([\w\-]+)$", api_pid),
     ("GET", r"/api/benchmark$", api_benchmark),
+    ("GET", r"/api/auth/demo$", api_auth_demo),
+    ("POST", r"/api/import/preview$", api_import_preview),
     ("GET", r"/api/audit$", api_audit),
     ("GET", r"/api/whoami$", api_whoami),
     ("GET", r"/api/document/([\w\-]+)$", api_document),
     ("GET", r"/api/event/([\w\-]+)$", api_event),
 ]
 ROUTES = [(m, re.compile(p), h) for m, p, h in ROUTES]
+
+
+def _sample_import_rows() -> list[dict]:
+    return [
+        {"equipment_tag": "P-204", "event_time": "2026-06-28T05:45:00",
+         "record_type": "inspection", "reading": "7.4", "unit": "mm/s",
+         "notes": "Vibrtion route: 1x dominant, interlock bypass still active"},
+        {"equipment_tag": "", "event_time": "2026-06-28T06:10:00",
+         "record_type": "work_order", "reading": "", "unit": "",
+         "notes": "Incomplete CMMS export: alignmnt correction pending, missing tag"},
+        {"equipment_tag": "C-12", "event_time": "2026-06-27T23:30:00",
+         "record_type": "alarm", "reading": "7.2", "unit": "mm/s",
+         "notes": "Healthy compressor vibration spike during startup; cleared in 4 min"},
+    ]
+
+
+def _preview_import(rows: list[dict]) -> dict:
+    mapped = []
+    issues = []
+    for i, row in enumerate(rows[:25], start=1):
+        norm = {str(k).strip().lower(): v for k, v in row.items()}
+        tag = _first(norm, "asset_id", "asset", "tag", "equipment", "equipment_tag", "equip")
+        ts = _first(norm, "ts", "timestamp", "event_time", "date", "occurred", "raised_on")
+        kind = (_first(norm, "type", "record_type", "event_type", "check_type", "alarm_code") or "record").lower()
+        notes = _first(norm, "notes", "summary", "remarks", "description", "text") or ""
+        value = _first(norm, "value", "reading")
+        mapped.append({
+            "row": i,
+            "asset_id": tag or "(missing)",
+            "ts": ts or "(missing)",
+            "event_type": _infer_event_type(kind, notes),
+            "param": _infer_param(kind, notes),
+            "value": value or "",
+            "quality": "ready" if tag and ts else "needs_review",
+            "notes": notes,
+        })
+        if not tag:
+            issues.append({"row": i, "severity": "review", "issue": "Missing asset tag"})
+        if not ts:
+            issues.append({"row": i, "severity": "review", "issue": "Missing timestamp"})
+        if _looks_typo(notes):
+            issues.append({"row": i, "severity": "info", "issue": "Typo-tolerant mapping suggested"})
+    return {
+        "source": "CSV upload preview",
+        "rows_received": len(rows),
+        "mapped_rows": mapped,
+        "issues": issues,
+        "next_step": "Reviewed rows would be normalized into the same Event schema, lineage store, and graph links.",
+    }
+
+
+def _first(row: dict, *names: str) -> str | None:
+    for name in names:
+        val = row.get(name)
+        if val not in (None, ""):
+            return str(val).strip()
+    return None
+
+
+def _infer_event_type(kind: str, notes: str) -> str:
+    text = f"{kind} {notes}".lower()
+    if "alarm" in text:
+        return "ALARM"
+    if "work" in text or "cmms" in text:
+        return "WORKORDER"
+    if "inspection" in text or "route" in text:
+        return "INSPECTION"
+    return "READING"
+
+
+def _infer_param(kind: str, notes: str) -> str:
+    text = f"{kind} {notes}".lower()
+    if "vib" in text or "vibrtion" in text:
+        return "vibration"
+    if "align" in text or "alignmnt" in text:
+        return "alignment"
+    if "pressure" in text or "dp" in text:
+        return "pressure"
+    return ""
+
+
+def _looks_typo(text: str) -> bool:
+    low = text.lower()
+    return any(t in low for t in ("vibrtion", "alignmnt", "w/o", "wrkord"))
 
 
 class Handler(BaseHTTPRequestHandler):
