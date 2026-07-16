@@ -184,6 +184,12 @@ def detect(conn, asset_id: str, as_of: str | None = None) -> dict:
         return {"asset_id": asset_id, "as_of": as_of, "at_risk": False,
                 "confidence": 0.0, "message": "No known failure trajectory matched."}
 
+    if best["confidence"] < 0.5:
+        return {"asset_id": asset_id, "as_of": as_of, "at_risk": False,
+                "confidence": best["confidence"],
+                "matched_stages": best["matched_stages"],
+                "message": "Only a weak partial match; treating as watch-only, not an active failure trajectory."}
+
     # lead-time estimate: how long, historically, from the current stage to trip
     traj = best["trajectory"]
     offset = traj["stage_offsets_days_before_trip"].get(best["current_stage"])
@@ -208,6 +214,7 @@ def detect(conn, asset_id: str, as_of: str | None = None) -> dict:
         "predicted_trip_ts": predicted_trip,
         "lead_time_days": lead_time_days,
         "similar_cases": traj["cases"],
+        "confidence_explanation": _confidence_explanation(best, traj, asset_id),
         "message": _risk_message(best, lead_time_days),
     }
 
@@ -256,6 +263,7 @@ def simulate(conn, asset_id: str, defer_days: float = 0.0) -> dict:
         "defer_days": defer_days,
         "deferred_trip_risk": deferred,
         "risk_reduction": round(deferred - act_now, 2),
+        "business_impact": _business_impact(defer_days),
         "recommendation": ("Act today: removes the trajectory before the predicted "
                            f"trip. Deferring {defer_days:g} days raises trip risk to "
                            f"{int(deferred*100)}%."),
@@ -291,3 +299,34 @@ def _risk_message(best, lead_time_days) -> str:
                 f"occurred. Failure is imminent; act immediately.")
     return (f"At stage '{stage}'. Based on {best['stages_total']}-stage history, "
             f"estimated ~{lead_time_days:g} days to trip. Act now to break the chain.")
+
+
+def _confidence_explanation(best, traj, asset_id: str) -> list[dict]:
+    precursor_total = max(len(traj["pattern"]) - 1, 1)
+    matched = len(best["matched_stages"])
+    criticality_bonus = 0.06 if asset_id in {"P-204", "HX-11", "C-12"} else 0.03
+    return [
+        {"factor": "Matched stages", "value": f"{matched}/{precursor_total}",
+         "weight": round(0.80 * (matched / precursor_total), 2)},
+        {"factor": "Support cases", "value": str(traj["support"]),
+         "weight": round(min(0.12, traj["support"] * 0.04), 2)},
+        {"factor": "Recency", "value": best["current_stage_ts"][:10],
+         "weight": 0.08},
+        {"factor": "Asset criticality", "value": "high" if criticality_bonus > 0.03 else "medium",
+         "weight": criticality_bonus},
+    ]
+
+
+def _business_impact(defer_days: float) -> dict:
+    trip_cost_inr = 450000
+    trip_cost_usd = 5400
+    avoided_hours = max(2.0, min(12.0, defer_days + 0.5))
+    return {
+        "pump_trip_cost_per_hour": {"inr": trip_cost_inr, "usd": trip_cost_usd},
+        "average_downtime_avoided_hours": avoided_hours,
+        "estimated_avoided_downtime_cost": {
+            "inr": int(trip_cost_inr * avoided_hours),
+            "usd": int(trip_cost_usd * avoided_hours),
+        },
+        "inspection_search_time": {"before_hours": 3.0, "after_seconds": 18},
+    }

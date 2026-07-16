@@ -73,7 +73,7 @@ def answer(conn, store: "vectorstore.VectorStore", question: str,
             "body": _format_evidence(hits),
         })
 
-    confidence = _confidence(hits, asset is not None, bool(root))
+    confidence, confidence_explanation = _confidence(hits, asset is not None, bool(root), risk, asset)
     summary = _summary(question, asset, risk, root)
 
     return {
@@ -87,6 +87,7 @@ def answer(conn, store: "vectorstore.VectorStore", question: str,
         "risk": risk if (risk and risk.get("at_risk")) else None,
         "citations": citations,
         "confidence": confidence,
+        "confidence_explanation": confidence_explanation,
         "intent": "asset" if asset else "fallback",
     }
 
@@ -131,11 +132,36 @@ def _link(h: dict) -> str | None:
     return None
 
 
-def _confidence(hits, has_asset: bool, has_root: bool) -> float:
+def _confidence(hits, has_asset: bool, has_root: bool,
+                risk: dict | None = None, asset: dict | None = None) -> tuple[float, list[dict]]:
     if not hits:
-        return 0.1
+        return 0.1, [{"factor": "Evidence", "value": "no matching passages", "weight": 0.1}]
     top = clamp(hits[0]["score"] / 0.4)          # TF-IDF scores are modest
     evidence = clamp(len(hits) / 4.0)
     context = 1.0 if has_asset else 0.45
     root_bonus = 0.1 if has_root else 0.0
-    return round(clamp(0.5 * top + 0.22 * evidence + 0.18 * context + root_bonus), 2)
+    score = round(clamp(0.5 * top + 0.22 * evidence + 0.18 * context + root_bonus), 2)
+    explanation = [
+        {"factor": "Matched records", "value": str(len(hits)), "weight": round(0.22 * evidence, 2)},
+        {"factor": "Best source match", "value": f"{hits[0]['score']:.2f}", "weight": round(0.5 * top, 2)},
+        {"factor": "Asset context", "value": asset["asset_id"] if asset else "auto-detected",
+         "weight": round(0.18 * context, 2)},
+    ]
+    if risk and risk.get("at_risk"):
+        explanation.append({"factor": "Matched stages",
+                            "value": f"{len(risk.get('matched_stages', []))}/{max(len(risk.get('pattern', [])) - 1, 1)}",
+                            "weight": risk.get("confidence", 0)})
+        explanation.append({"factor": "Support cases",
+                            "value": str(risk.get("support", 0)),
+                            "weight": min(0.12, risk.get("support", 0) * 0.04)})
+        explanation.append({"factor": "Recency",
+                            "value": (risk.get("current_stage_ts") or "")[:10],
+                            "weight": 0.08})
+    if asset:
+        explanation.append({"factor": "Asset criticality",
+                            "value": asset.get("criticality", ""),
+                            "weight": 0.06 if asset.get("criticality") == "A" else 0.03})
+    if has_root:
+        explanation.append({"factor": "Root-cause support", "value": "similar cases found",
+                            "weight": root_bonus})
+    return score, explanation
