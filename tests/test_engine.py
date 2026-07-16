@@ -12,6 +12,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from chronos.pipeline import build
+from chronos import security
 from chronos.store import db
 from chronos.intel import vectorstore, copilot, sequence, rca, compliance, graph
 from chronos.eval import benchmark
@@ -46,6 +47,14 @@ def test_live_asset_at_risk():
     assert det["at_risk"] is True
     assert det["confidence"] >= 0.5
     assert det["lead_time_days"] is not None
+    conn.close()
+
+
+def test_healthy_vibration_spike_not_active_risk():
+    conn = db.connect()
+    det = sequence.detect(conn, "C-12")
+    assert det["at_risk"] is False
+    assert det["confidence"] < 0.5
     conn.close()
 
 
@@ -90,6 +99,21 @@ def test_benchmark_sequence_perfect_on_demo():
     assert sp["fp"] == 0 and sp["fn"] == 0
     assert sp["f1"] == 1.0
     conn.close()
+
+
+def test_noisy_validation_is_imperfect_but_reasonable():
+    conn = db.connect()
+    nv = benchmark.noisy_validation(conn)
+    assert nv["entity_extraction"]["f1"] < 1.0
+    assert nv["sequence_prediction"]["f1"] < 1.0
+    assert nv["sequence_prediction"]["fp"] == 0
+    conn.close()
+
+
+def test_demo_jwt_resolves_role():
+    ident = {x["role"]: x for x in security.demo_identities()}
+    assert security.role_for(ident["admin"]["token"], None) == "admin"
+    assert security.role_for("Bearer " + ident["technician"]["token"], None) == "technician"
 
 
 if __name__ == "__main__":
