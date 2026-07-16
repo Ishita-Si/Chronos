@@ -7,6 +7,7 @@ const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g,
 const pct = (x) => Math.round((x || 0) * 100);
 
 let TOKEN = "eng-demo";
+let AUTH_IDENTITIES = [];
 async function api(path, opts = {}) {
   opts.headers = Object.assign({ "X-CHRONOS-Token": TOKEN }, opts.headers || {});
   const r = await fetch(path, opts);
@@ -54,6 +55,17 @@ if (roleSel) roleSel.addEventListener("change", async () => {
   if (active) active.click();        // re-render current view under new role
   loadDashboard();
 });
+
+async function initAuthDemo() {
+  const d = await api("/api/auth/demo");
+  if (!d.identities || !roleSel) return;
+  AUTH_IDENTITIES = d.identities;
+  const preferred = AUTH_IDENTITIES.find(x => x.role === "engineer") || AUTH_IDENTITIES[0];
+  roleSel.innerHTML = AUTH_IDENTITIES.map(x =>
+    `<option value="${esc(x.token)}">${esc(x.name)}</option>`).join("");
+  roleSel.value = preferred.token;
+  TOKEN = preferred.token;
+}
 
 /* ---------------- dashboard ---------------- */
 async function loadDashboard() {
@@ -275,6 +287,8 @@ function renderAnswer(a) {
 
   html += tableHTML(a.table);
 
+  html += confidenceHTML(a.confidence_explanation);
+
   (a.sections || []).forEach(s => {
     html += `<div class="ans-block"><h4>${esc(s.heading)}</h4><p>${esc(s.body)}</p></div>`;
   });
@@ -350,7 +364,8 @@ async function openAsset(id) {
     }).join("");
     html += `<div class="conf-row"><span class="conf-badge conf-lo">RISK ${pct(risk.confidence)}%</span>
       <span class="muted">${esc(risk.message)}</span></div>
-      <div class="chain">${chain}</div>`;
+      <div class="chain">${chain}</div>
+      ${confidenceHTML(risk.confidence_explanation)}`;
   } else {
     html += `<p class="muted">${esc(risk.message || "No active failure trajectory.")}</p>`;
   }
@@ -419,11 +434,21 @@ async function simulate(id) {
   const s = await api("/api/simulate/" + id + "?defer=7");
   if (denied(s)) { $("#sim-out").innerHTML = lock(s); return; }
   if (!s.supported) { $("#sim-out").innerHTML = `<p class="muted">${esc(s.message)}</p>`; return; }
+  const bi = s.business_impact || {};
+  const trip = bi.pump_trip_cost_per_hour || {};
+  const cost = bi.estimated_avoided_downtime_cost || {};
+  const search = bi.inspection_search_time || {};
   $("#sim-out").innerHTML = `<div class="answer">
     <div class="row"><span>Act <b>today</b></span><span class="status compliant">${pct(s.act_today_trip_risk)}% trip risk</span></div>
     <div class="row" style="margin-top:8px"><span>Defer <b>${s.defer_days} days</b></span><span class="status non_compliant">${pct(s.deferred_trip_risk)}% trip risk</span></div>
     <div class="bar" style="margin-top:12px"><span style="width:${pct(s.risk_reduction)}%"></span></div>
     <p class="lead">Acting now reduces trip risk by <b>${pct(s.risk_reduction)} points</b>. ${esc(s.recommendation)}</p>
+    <div class="impact-grid">
+      <div><b>Trip cost/hr</b><span>₹${Number(trip.inr || 0).toLocaleString()} / $${Number(trip.usd || 0).toLocaleString()}</span></div>
+      <div><b>Downtime avoided</b><span>${esc(bi.average_downtime_avoided_hours || "")} hours</span></div>
+      <div><b>Avoided cost</b><span>₹${Number(cost.inr || 0).toLocaleString()} / $${Number(cost.usd || 0).toLocaleString()}</span></div>
+      <div><b>Inspection search</b><span>${esc(search.before_hours || "")}h to ${esc(search.after_seconds || "")}s</span></div>
+    </div>
   </div>`;
 }
 
@@ -517,6 +542,45 @@ async function loadPID() {
     <div class="chain">${p.connections.map(c => `<span class="stage">${esc(c.from)} <span class="arrow">→</span> ${esc(c.to)}</span>`).join("")}</div>
     <p class="muted" style="margin-top:12px">Tags <b>FCV-204</b> and <b>TK-2</b> were discovered on the drawing
       but absent from CMMS/SCADA — auto-registered as new graph nodes.</p>`;
+  loadImportDemo();
+}
+
+async function loadImportDemo(csvText) {
+  const sample = `equipment_tag,event_time,record_type,reading,unit,notes
+P-204,2026-06-28T05:45:00,inspection,7.4,mm/s,"Vibrtion route: 1x dominant, interlock bypass still active"
+,2026-06-28T06:10:00,work_order,,,"Incomplete CMMS export: alignmnt correction pending, missing tag"
+C-12,2026-06-27T23:30:00,alarm,7.2,mm/s,"Healthy compressor vibration spike during startup; cleared in 4 min"`;
+  const d = await api("/api/import/preview", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ csv_text: csvText || sample }),
+  });
+  if (denied(d)) { $("#import-demo").innerHTML = lock(d); return; }
+  $("#import-demo").innerHTML = `<div class="detail-panel">
+    <div class="import-head">
+      <textarea id="import-csv" spellcheck="false">${esc(csvText || sample)}</textarea>
+      <button class="btn-primary" id="import-preview-btn">Preview mapping</button>
+    </div>
+    <div class="kpi-grid" style="margin-top:12px">
+      ${kpi(d.rows_received, "Rows received")}
+      ${kpi((d.issues || []).length, "Review flags", (d.issues || []).length ? "alert" : "good")}
+      ${kpi((d.mapped_rows || []).filter(r => r.quality === "ready").length, "Ready rows", "good")}
+    </div>
+    ${importTable(d)}
+    <p class="muted">${esc(d.next_step)}</p>
+  </div>`;
+  $("#import-preview-btn").addEventListener("click", () => loadImportDemo($("#import-csv").value));
+}
+
+function importTable(d) {
+  const rows = d.mapped_rows || [];
+  return `<div class="tbl-wrap"><table class="tbl"><thead><tr>
+    <th>Row</th><th>Asset</th><th>Time</th><th>Type</th><th>Param</th><th>Quality</th>
+  </tr></thead><tbody>` + rows.map(r => `<tr>
+    <td>${esc(r.row)}</td><td>${esc(r.asset_id)}</td><td>${esc(r.ts)}</td>
+    <td>${esc(r.event_type)}</td><td>${esc(r.param)}</td><td>${esc(r.quality)}</td>
+  </tr>`).join("") + `</tbody></table></div>` +
+  (d.issues && d.issues.length ? `<div class="cites">` + d.issues.map(i =>
+    `<span class="cite"><b>Row ${esc(i.row)} · ${esc(i.severity)}</b><br>${esc(i.issue)}</span>`).join("") + `</div>` : "");
 }
 
 /* ---------------- benchmark ---------------- */
@@ -526,16 +590,25 @@ async function loadBenchmark() {
   const b = await api("/api/benchmark");
   if (denied(b)) { el.innerHTML = lock(b); return; }
   const ee = b.entity_extraction, pe = b.pid_extraction, sp = b.sequence_prediction,
-        cq = b.citation_quality, ti = b.time_to_information, lc = b.linkage_completeness;
+        nv = b.noisy_validation, cq = b.citation_quality, ti = b.time_to_information,
+        lc = b.linkage_completeness, bi = b.business_impact;
   const metric = (l, v, sub) => `<div class="kpi"><div class="v">${esc(v)}</div><div class="l">${esc(l)}</div>
     ${sub ? `<div class="muted" style="font-size:11px;margin-top:4px">${esc(sub)}</div>` : ""}</div>`;
   el.innerHTML = `
     <h2 class="section-title">Technical excellence</h2>
+    <p class="muted">${esc(b.framing || "On controlled synthetic validation.")}</p>
     <div class="kpi-grid">
       ${metric("Entity extraction F1", ee.f1, `P ${ee.precision} · R ${ee.recall}`)}
       ${metric("P&ID tag F1", pe.tag_f1, `connectivity F1 ${pe.connectivity_f1}`)}
       ${metric("Trajectory pred. F1", sp.f1, `TP ${sp.tp} · FP ${sp.fp} · FN ${sp.fn}`)}
       ${metric("Citation rate", pct(cq.citation_rate) + "%", "answers source-backed")}
+    </div>
+    <h2 class="section-title">Noisy validation</h2>
+    <p class="muted">${esc(nv.framing)}</p>
+    <div class="kpi-grid">
+      ${metric("Dirty entity F1", nv.entity_extraction.f1, `P ${nv.entity_extraction.precision} / R ${nv.entity_extraction.recall}`)}
+      ${metric("Hard trajectory F1", nv.sequence_prediction.f1, `TP ${nv.sequence_prediction.tp} / FP ${nv.sequence_prediction.fp} / FN ${nv.sequence_prediction.fn}`)}
+      ${metric("Counterexamples", nv.counterexamples.length, nv.counterexamples.join(", "))}
     </div>
     <h2 class="section-title">CHRONOS vs traditional search</h2>
     <div class="answer">
@@ -553,7 +626,23 @@ async function loadBenchmark() {
       ${metric("Cross-system links", lc.cross_system_auto_links)}
       ${metric("P&ID connectivity", lc.pid_connectivity_edges)}
       ${metric("Sources unified", lc.source_systems_unified)}
-    </div>`;
+    </div>
+    <h2 class="section-title">Business impact estimate</h2>
+    <div class="kpi-grid">
+      ${metric("Pump trip cost/hr", `₹${Number(bi.pump_trip_cost_per_hour.inr).toLocaleString()}`, `$${Number(bi.pump_trip_cost_per_hour.usd).toLocaleString()} per hour`)}
+      ${metric("Downtime avoided", `${bi.average_downtime_avoided_hours}h`, "average avoided trip duration")}
+      ${metric("Avoided downtime cost", `₹${Number(bi.estimated_avoided_downtime_cost.inr).toLocaleString()}`, `$${Number(bi.estimated_avoided_downtime_cost.usd).toLocaleString()}`)}
+      ${metric("Inspection search", `${bi.inspection_search_time.before_hours}h → ${bi.inspection_search_time.after_seconds}s`, "hours reduced to seconds")}
+    </div>
+    <p class="muted">${esc(bi.basis)}</p>`;
+}
+
+function confidenceHTML(items) {
+  if (!items || !items.length) return "";
+  return `<div class="ans-block"><h4>Confidence explanation</h4>
+    <div class="explain-grid">` + items.map(x => `<div class="explain-item">
+      <b>${esc(x.factor)}</b><span>${esc(x.value)}</span><em>${esc(x.weight)}</em>
+    </div>`).join("") + `</div></div>`;
 }
 
 /* ---------------- onboarding + guided tour ---------------- */
@@ -624,6 +713,5 @@ function positionTour() {
 
 /* ---------------- boot ---------------- */
 updateContext("dashboard");
-loadDashboard();
-initCopilot();
+initAuthDemo().then(() => { loadDashboard(); initCopilot(); });
 try { if (!localStorage.getItem("chronos_seen")) setTimeout(() => { const w = $("#welcome"); if (w) w.hidden = false; }, 450); } catch (e) {}

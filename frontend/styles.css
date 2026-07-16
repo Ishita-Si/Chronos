@@ -313,6 +313,64 @@ main { padding: 22px 18px; max-width: 940px; margin: 0 auto; }
 .cite b { color: var(--text); }
 .cite .score { float: right; color: var(--ice); font-weight: 600; }
 
+.explain-grid, .impact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 9px;
+  margin-top: 8px;
+}
+.explain-item, .impact-grid > div {
+  background: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 10px 11px;
+  min-width: 0;
+}
+.explain-item b, .impact-grid b {
+  display: block;
+  font-family: var(--f-mono);
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  margin-bottom: 5px;
+}
+.explain-item span, .impact-grid span {
+  display: block;
+  color: var(--text);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.explain-item em {
+  display: inline-block;
+  margin-top: 5px;
+  font-family: var(--f-mono);
+  font-size: 10px;
+  color: var(--ice);
+  font-style: normal;
+}
+
+.import-head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: start;
+}
+#import-csv {
+  width: 100%;
+  min-height: 136px;
+  resize: vertical;
+  background: var(--ink-2);
+  color: var(--text);
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-sm);
+  padding: 12px 13px;
+  font-family: var(--f-mono);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+#import-csv:focus { outline: none; border-color: rgba(247,169,50,.6); }
+
 /* ---------------- compliance ---------------- */
 .gap { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 13px 15px; margin: 9px 0; display: flex; justify-content: space-between; gap: 12px; align-items: center; cursor: pointer; transition: .16s; }
 .gap:hover { border-color: var(--line-2); transform: translateX(2px); }
@@ -485,3 +543,9 @@ main { padding: 22px 18px; max-width: 940px; margin: 0 auto; }
 .tour-skip { background: none; border: none; color: var(--muted); font-family: var(--f-mono); font-size: 11.5px; cursor: pointer; }
 .tour-skip:hover { color: var(--text); }
 .tour-next { background: var(--amber); color: #1a1205; border: none; border-radius: var(--r-sm); padding: 8px 16px; font-family: var(--f-mono); font-weight: 600; font-size: 12px; cursor: pointer; }
+
+@media (max-width: 640px) {
+  .import-head { grid-template-columns: 1fr; }
+  .import-head .btn-primary { width: 100%; }
+  .impact-grid, .explain-grid { grid-template-columns: 1fr; }
+}
