@@ -52,6 +52,7 @@ class _Sink:
         self.alarms: list[dict] = []
         self.workorders: list[dict] = []
         self.inspections: list[dict] = []
+        self.dirty_records: list[dict] = []
         self._wo = 4000
 
     def reading(self, tag, ts, signal, value, units):
@@ -74,6 +75,12 @@ class _Sink:
         self.inspections.append({"asset_tag": asset_tag, "date": to_iso(ts),
                                  "check_type": check_type, "outcome": outcome,
                                  "remarks": remarks, "inspector": inspector})
+
+    def dirty(self, system, asset_tag, ts, record_type, notes, value="", unit=""):
+        self.dirty_records.append({"source_system": system, "equipment_tag": asset_tag,
+                                   "event_time": to_iso(ts) if ts else "",
+                                   "record_type": record_type, "reading": value,
+                                   "unit": unit, "notes": notes})
 
 
 def _routine_readings(sink: _Sink, rng: random.Random):
@@ -202,6 +209,31 @@ def _routine_inspections(sink: _Sink, rng: random.Random):
                     "Pressure safety valve pop-tested and certified.", "T01")
 
 
+def _noise_and_counterexamples(sink: _Sink, rng: random.Random):
+    """Messy plant records that should not become clean failure evidence."""
+    # False alarms: vibration alerts without the causal precursor chain.
+    for asset_id, day in (("C-12", 36), ("P-101", 52)):
+        ts = TODAY - timedelta(days=day)
+        sink.alarm(asset_id, ts, "VIB-HI", "medium",
+                   "Short vibration spike during startup; cleared after load stabilized.")
+        sink.reading(asset_id, ts + timedelta(minutes=2), "vibration",
+                     7.0 + rng.uniform(0.1, 0.4), "mm/s")
+        sink.reading(asset_id, ts + timedelta(hours=2), "vibration",
+                     2.4 + rng.uniform(-0.2, 0.2), "mm/s")
+
+    # Incomplete and typo-filled records kept as a dirty import sample, rather
+    # than blindly trusted source-of-record data.
+    sink.dirty("cmms_export", "", TODAY - timedelta(days=2), "work_order",
+               "Wrkord incomplete: alignmnt correction pending, missing equip tag")
+    sink.dirty("inspection_app", "P-204", TODAY - timedelta(days=1, hours=5),
+               "inspection", "Vibrtion route shows 1x dominant; tag verified manually",
+               "7.4", "mm/s")
+    sink.dirty("dcs_alarms", "HX-11?", TODAY - timedelta(days=4), "alarm",
+               "Operator note says pump vib high, but tag field contains exchanger typo")
+    sink.dirty("cmms_export", "P-305", None, "work_order",
+               "Incomplete work order export: bearing insp pending, timestamp missing")
+
+
 def generate(out_dir: Path | None = None) -> dict:
     """Generate all source files. Returns a small manifest of counts."""
     out_dir = out_dir or config.WAREHOUSE_DIR
@@ -220,6 +252,7 @@ def generate(out_dir: Path | None = None) -> dict:
     _hx_fouling_trajectory(sink, rng, "HX-11", "2025-04-01T06:00:00")
     # The LIVE, in-progress P-204 trajectory (no trip yet) — detector must catch it
     _pump_failure_trajectory(sink, rng, "P-204", "2026-06-10T06:00:00", ongoing=True)
+    _noise_and_counterexamples(sink, rng)
 
     _write_csv(out_dir / "assets.csv",
                ["asset_id", "name", "type", "area", "criticality", "install_date"],
@@ -238,11 +271,15 @@ def generate(out_dir: Path | None = None) -> dict:
     _write_csv(out_dir / "inspections.csv",
                ["asset_tag", "date", "check_type", "outcome", "remarks", "inspector"],
                sink.inspections)
+    _write_csv(out_dir / "dirty_records.csv",
+               ["source_system", "equipment_tag", "event_time", "record_type", "reading", "unit", "notes"],
+               sink.dirty_records)
 
     return {
         "assets": len(ASSETS), "persons": len(PERSONS),
         "scada": len(sink.scada), "alarms": len(sink.alarms),
         "workorders": len(sink.workorders), "inspections": len(sink.inspections),
+        "dirty_records": len(sink.dirty_records),
     }
 
 

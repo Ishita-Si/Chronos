@@ -120,6 +120,77 @@ def sequence_prediction(conn):
             "tp": tp, "fp": fp, "fn": fn, "tn": tn, "cases": len(cases)}
 
 
+def noisy_validation(conn):
+    """
+    Harder synthetic validation: dirty text, false alarms, incomplete work
+    orders, and healthy assets with vibration spikes. Imperfect scores here
+    are the point: they show behavior outside the clean showcase cases.
+    """
+    entity_cases = [
+        ("Vibrtion spike on P-204 drive end; alignmnt corr pending.",
+         {"tags": {"P-204"}, "params": {"vibration", "alignment"}}),
+        ("Wrkord incomplete: bearing insp pending, missing equip tag.",
+         {"tags": set(), "params": {"bearing"}}),
+        ("HX-11? dp hi maybe fouling; operator wrote HXI1 in notes.",
+         {"tags": {"HX-11"}, "params": {"pressure", "fouling"}}),
+        ("Healthy compressor C-12 startup vibration spike cleared in 4 min.",
+         {"tags": {"C-12"}, "params": {"vibration"}}),
+    ]
+    tp = fp = fn = 0
+    for text, gold in entity_cases:
+        pred_tags = set(extract.extract_tags(text))
+        pred_params = set(extract.extract_params(text))
+        for field, predset in (("tags", pred_tags), ("params", pred_params)):
+            g = gold[field]
+            tp += len(predset & g)
+            fp += len(predset - g)
+            fn += len(g - predset)
+    ep, er, ef = _prf(tp, fp, fn)
+
+    sequence_cases = [
+        {"asset": "P-204", "as_of": config.AS_OF, "label": 1,
+         "note": "Live in-progress trajectory"},
+        {"asset": "C-12", "as_of": config.AS_OF, "label": 0,
+         "note": "Healthy compressor with a vibration spike"},
+        {"asset": "P-101", "as_of": "2026-05-07T08:00:00", "label": 0,
+         "note": "Short startup vibration false alarm"},
+        {"asset": "P-101", "as_of": "2025-02-10T06:00:00", "label": 1,
+         "note": "Early precursor before enough stages accumulated"},
+    ]
+    stp = sfp = sfn = stn = 0
+    evaluated = []
+    for c in sequence_cases:
+        det = sequence.detect(conn, c["asset"], as_of=c["as_of"])
+        pred = 1 if (det.get("at_risk") and det.get("confidence", 0) >= 0.5) else 0
+        if pred and c["label"]:
+            stp += 1
+        elif pred and not c["label"]:
+            sfp += 1
+        elif not pred and c["label"]:
+            sfn += 1
+        else:
+            stn += 1
+        evaluated.append({**c, "predicted": pred, "confidence": det.get("confidence", 0.0),
+                          "reason": det.get("message")})
+    sp, sr, sf = _prf(stp, sfp, sfn)
+
+    return {
+        "framing": "Noisy synthetic validation with counterexamples; scores are expected to be imperfect.",
+        "entity_extraction": {"precision": ep, "recall": er, "f1": ef,
+                              "tp": tp, "fp": fp, "fn": fn},
+        "sequence_prediction": {"precision": sp, "recall": sr, "f1": sf,
+                                "tp": stp, "fp": sfp, "fn": sfn, "tn": stn,
+                                "cases": evaluated},
+        "counterexamples": [
+            "false vibration alarms",
+            "incomplete work orders",
+            "missing tags",
+            "typo-filled records",
+            "healthy assets with similar vibration spikes",
+        ],
+    }
+
+
 # --- 4. citation precision --------------------------------------------------
 
 def citation_quality(conn, store):
@@ -179,6 +250,30 @@ def time_to_information(conn, store):
     }
 
 
+def business_impact():
+    pump_trip_cost_per_hour_inr = 450000
+    pump_trip_cost_per_hour_usd = 5400
+    downtime_avoided_hours = 7.5
+    analyst_search_hours_before = 3.0
+    analyst_search_seconds_after = 18
+    return {
+        "pump_trip_cost_per_hour": {
+            "inr": pump_trip_cost_per_hour_inr,
+            "usd": pump_trip_cost_per_hour_usd,
+        },
+        "average_downtime_avoided_hours": downtime_avoided_hours,
+        "estimated_avoided_downtime_cost": {
+            "inr": int(pump_trip_cost_per_hour_inr * downtime_avoided_hours),
+            "usd": int(pump_trip_cost_per_hour_usd * downtime_avoided_hours),
+        },
+        "inspection_search_time": {
+            "before_hours": analyst_search_hours_before,
+            "after_seconds": analyst_search_seconds_after,
+        },
+        "basis": "Illustrative demo economics; replace with site-specific cost and downtime rates.",
+    }
+
+
 # --- 6. linkage completeness ------------------------------------------------
 
 def linkage_completeness(conn):
@@ -208,12 +303,15 @@ def run_all() -> dict:
     conn = db.connect()
     store = vectorstore.build_store(conn)
     result = {
+        "framing": "On controlled synthetic validation.",
         "entity_extraction": entity_extraction(),
         "pid_extraction": pid_extraction(),
         "sequence_prediction": sequence_prediction(conn),
+        "noisy_validation": noisy_validation(conn),
         "citation_quality": citation_quality(conn, store),
         "time_to_information": time_to_information(conn, store),
         "linkage_completeness": linkage_completeness(conn),
+        "business_impact": business_impact(),
     }
     conn.close()
     return result
@@ -223,6 +321,7 @@ def _print_table(b: dict) -> None:
     def line(k, v):
         print(f"  {k:<34} {v}")
     print("\n" + "=" * 64 + "\n  CHRONOS BENCHMARK\n" + "=" * 64)
+    line("framing", b.get("framing", "On controlled synthetic validation."))
     ee = b["entity_extraction"]
     print("\n[Entity extraction]")
     line("precision / recall / F1", f"{ee['precision']} / {ee['recall']} / {ee['f1']}")
@@ -235,6 +334,13 @@ def _print_table(b: dict) -> None:
     print("\n[Sequence / failure-trajectory prediction]")
     line("precision / recall / F1", f"{sp['precision']} / {sp['recall']} / {sp['f1']}")
     line("TP/FP/FN/TN", f"{sp['tp']}/{sp['fp']}/{sp['fn']}/{sp['tn']}")
+    nv = b["noisy_validation"]
+    print("\n[Noisy validation]")
+    line("framing", nv["framing"])
+    ne = nv["entity_extraction"]
+    ns = nv["sequence_prediction"]
+    line("dirty entity P/R/F1", f"{ne['precision']} / {ne['recall']} / {ne['f1']}")
+    line("hard sequence P/R/F1", f"{ns['precision']} / {ns['recall']} / {ns['f1']}")
     cq = b["citation_quality"]
     print("\n[Citation quality]")
     line("citation rate", cq["citation_rate"])
@@ -247,6 +353,13 @@ def _print_table(b: dict) -> None:
     line("event->asset linkage", f"{int(lc['linkage_rate']*100)}%")
     line("cross-system auto-links", lc["cross_system_auto_links"])
     line("source systems unified", lc["source_systems_unified"])
+    bi = b["business_impact"]
+    print("\n[Business impact estimate]")
+    line("pump trip cost/hour",
+         f"INR {bi['pump_trip_cost_per_hour']['inr']:,} / USD {bi['pump_trip_cost_per_hour']['usd']:,}")
+    line("avg downtime avoided", f"{bi['average_downtime_avoided_hours']} h")
+    line("inspection search",
+         f"{bi['inspection_search_time']['before_hours']} h -> {bi['inspection_search_time']['after_seconds']} s")
     print()
 
 
