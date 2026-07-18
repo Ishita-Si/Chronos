@@ -45,7 +45,13 @@ def _store() -> vectorstore.VectorStore:
 # --- API route handlers (each returns a JSON-serialisable object) -----------
 
 def api_health(conn, q, body):
-    return {"status": "ok", "as_of": config.AS_OF, "version": "1.0.0"}
+    return {
+        "status": "ok",
+        "as_of": config.AS_OF,
+        "version": "1.0.0",
+        "validation": "synthetic plant with embedded ground truth",
+        "continuous_learning": "architected, currently batch rebuild",
+    }
 
 
 def api_stats(conn, q, body):
