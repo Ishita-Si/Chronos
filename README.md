@@ -1,6 +1,6 @@
 # CHRONOS — Unread Plant Memory Engine (UPME)
 
-> **Winner Submission — Best RAG Application for Industrial Intelligence**
+> **RAG Application for Industrial Intelligence**
 >
 > CHRONOS converts decades of ignored operational traces — SCADA alarms, CMMS work orders, inspection records, SOPs, OEM manuals, and P&ID drawings — into a **queryable, causal, continuously-learning operational memory**.
 >
