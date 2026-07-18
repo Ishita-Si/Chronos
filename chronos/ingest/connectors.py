@@ -73,6 +73,18 @@ def read_clauses() -> list[dict]:
         return []
     return json.loads(config.REGS_FILE.read_text(encoding="utf-8"))
 
+def read_emails() -> list[dict]:
+    """
+    Email / shift handover connector (stub for hackathon).
+    
+    Production: connect to Exchange / Outlook / plant email archive.
+    Expected columns: message_id, sender, timestamp, subject, body, tags_mentioned
+    """
+    path = config.WAREHOUSE_DIR / "emails.csv"
+    if not path.exists():
+        return []
+    return _read_csv(path)
+
 
 def _parse_frontmatter(raw: str) -> tuple[dict, str]:
     """Minimal YAML-ish front-matter parser (no external deps)."""
