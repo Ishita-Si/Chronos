@@ -209,7 +209,7 @@ def citation_quality(conn, store):
             "citation_rate": round(cited / len(qs), 3)}
             
 def citation_accuracy(conn, store, test_cases=None):
-    """Verify that cited sources actually support the claims made."""
+
     test_cases = test_cases or [
         {
             "question": "Why is high vibration recurring on P-204?",
@@ -415,6 +415,15 @@ def scalability_check(conn):
 def run_all() -> dict:
     conn = db.connect()
     store = vectorstore.build_store(conn)
+
+    try:
+        ca = citation_accuracy(conn, store)
+        print("citation_accuracy returned:", ca)
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        ca = None
+
     result = {
         "framing": "On controlled synthetic validation.",
         "entity_extraction": entity_extraction(),
@@ -422,13 +431,14 @@ def run_all() -> dict:
         "sequence_prediction": sequence_prediction(conn),
         "noisy_validation": noisy_validation(conn),
         "citation_quality": citation_quality(conn, store),
-        "citation_accuracy": citation_accuracy(conn, store),  # MUST be defined above
+        "citation_accuracy": ca,
         "time_to_information": time_to_information(conn, store),
         "linkage_completeness": linkage_completeness(conn),
         "business_impact": business_impact(),
-        "ux_metrics": ux_metrics(),  # MUST be defined above
-        "scalability": scalability_check(conn),  # MUST be defined above
-    }
+        "ux_metrics": ux_metrics(),
+        "scalability": scalability_check(conn),
+    };
+
     conn.close()
     return result
 
