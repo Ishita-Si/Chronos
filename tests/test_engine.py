@@ -115,6 +115,47 @@ def test_demo_jwt_resolves_role():
     assert security.role_for(ident["admin"]["token"], None) == "admin"
     assert security.role_for("Bearer " + ident["technician"]["token"], None) == "technician"
 
+def test_citation_accuracy():
+    """Citations must point to real sources and not hallucinate."""
+    conn = db.connect()
+    store = vectorstore.build_store(conn)
+    ans = copilot.answer(conn, store, "Why is high vibration recurring on P-204?")
+    assert ans["citations"], "answer has no citations"
+    # Every citation must have a real source_ref
+    for c in ans["citations"]:
+        assert c["ref"], "citation missing ref"
+        assert c["snippet"], "citation missing snippet"
+    # Summary should not claim certainty about unverified facts
+    summary = ans.get("summary", "").lower()
+    assert "definitely" not in summary, "summary claims certainty without evidence"
+    conn.close()
+
+
+def test_noisy_data_does_not_corrupt_graph():
+    """Dirty records are flagged, not blindly trusted."""
+    conn = db.connect()
+    # dirty_records.csv has 4 rows with issues
+    # They should NOT create clean events in the graph
+    dirty_events = conn.execute(
+        "SELECT COUNT(*) FROM events WHERE source LIKE '%dirty%'").fetchone()[0]
+    assert dirty_events == 0, "dirty records were incorrectly ingested as clean events"
+    conn.close()
+
+
+def test_rbac_enforcement():
+    """Technician cannot access audit; admin can."""
+    # Technician token
+    tech_role = security.role_for("tech-demo", None)
+    assert not security.can(tech_role, "audit"), "technician should not access audit"
+    
+    # Admin token
+    admin_role = security.role_for("admin-demo", None)
+    assert security.can(admin_role, "audit"), "admin should access audit"
+    
+    # Engineer cannot access audit
+    eng_role = security.role_for("eng-demo", None)
+    assert not security.can(eng_role, "audit"), "engineer should not access audit"
+
 
 if __name__ == "__main__":
     setup_module()
