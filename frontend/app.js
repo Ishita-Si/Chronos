@@ -681,6 +681,18 @@ async function loadBenchmark() {
       ${metric("Avoided downtime cost", `₹${Number(bi.estimated_avoided_downtime_cost.inr).toLocaleString()}`, `$${Number(bi.estimated_avoided_downtime_cost.usd).toLocaleString()}`)}
       ${metric("Inspection search", `${bi.inspection_search_time.before_hours}h → ${bi.inspection_search_time.after_seconds}s`, "hours reduced to seconds")}
     </div>
+        <h2 class="section-title">Citation accuracy</h2>
+    <div class="kpi-grid">
+      ${metric("Citation accuracy", pct(b.citation_accuracy.accuracy_rate) + "%", b.citation_accuracy.total_cases + " cases tested")}
+    </div>
+
+    <h2 class="section-title">UX & scalability</h2>
+    <div class="kpi-grid">
+      ${metric("Task completion", b.ux_metrics.task_completion_time_seconds + "s", "simulated")}
+      ${metric("Usefulness rating", b.ux_metrics.first_response_usefulness_rating + "/5", "simulated")}
+      ${metric("Events in graph", b.scalability.total_events.toLocaleString())}
+      ${metric("Query speed", b.scalability.query_1000_events_ms + " ms", "for 1000 events")}
+    </div>
     <p class="muted">${esc(bi.basis)}</p>`;
 }
 
