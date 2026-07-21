@@ -410,12 +410,18 @@ class Handler(BaseHTTPRequestHandler):
 def main() -> None:
     ensure_built()
     _store()  # warm the vector index
-    addr = (config.HOST, config.PORT)
+    import os
+
+    host = "0.0.0.0"
+    port = int(os.environ.get("PORT", config.PORT))
+
+    addr = (host, port)
     httpd = ThreadingHTTPServer(addr, Handler)
     print(f"CHRONOS — Unread Plant Memory Engine")
     print(f"  Serving on http://{config.HOST}:{config.PORT}")
     print(f"  API health: http://{config.HOST}:{config.PORT}/api/health")
     print("  Press Ctrl+C to stop.")
+    
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
