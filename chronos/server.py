@@ -25,6 +25,7 @@ from .store import db
 from .ingest import pid as pid_parser
 from .intel import vectorstore, copilot, sequence, rca, compliance, graph
 from .eval import benchmark
+from datetime import datetime
 
 _STORE: vectorstore.VectorStore | None = None
 _ctx = threading.local()   # holds the resolved role per request
@@ -48,8 +49,8 @@ def _store() -> vectorstore.VectorStore:
 def api_health(conn, q, body):
     return {
         "status": "ok",
-        "as_of": config.AS_OF,
-        "version": "1.0.0",
+        "as_of": datetime.now().strftime("%Y-%m-%d"),
+        "version": "1.2.0",
         "validation": "synthetic plant with embedded ground truth",
         "continuous_learning": "architected, currently batch rebuild",
     }
